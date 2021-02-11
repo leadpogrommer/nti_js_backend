@@ -3,35 +3,9 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var cors = require('cors')
-// var LocalStrategy = require('passport-local').Strategy
-// var passport = require('passport')
-// var session = require("express-session")
+const cladman = new (require('./cladman'))();
 
 const Users = require("./routes/users")
-
-// passport.use('local', new LocalStrategy((username, password, done) => {
-//     let user = Users.getUser(username);
-//     if(!user){
-//         return done(null, false, {message: "Incorrect username"});
-//     }
-//     if(!Users.validatePassword(user, password)){
-//         return done(null, false, {message: "Incorrect password"});
-//     }
-//     return done(null, user)
-//
-// }));
-//
-// passport.serializeUser((user, done) => {
-//     done(null, user.username)
-// });
-//
-// passport.deserializeUser(async (name, done) => {
-//     let user = await Users.getUser(name);
-//     done(null, user)
-// });
-
-
-// var indexRouter = require('./routes/index');
 
 
 var app = express();

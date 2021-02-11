@@ -37,6 +37,7 @@ router.post('/register', async function(req, res, next) {
     return;
   }
   console.log("all ok");
+  req.body.username = req.body.username.toLowerCase();
   let hash = await bcrypt.hash(req.body.password, 10)
 
   collection.insertOne({username: req.body.username, password: hash, admin: false})
@@ -52,7 +53,7 @@ router.post('/login', async (req, res, next) => {
     res.status(400).end();
     return;
   }
-
+  req.body.username = req.body.username.toLowerCase();
   let user = await getUser(req.body.username);
   if(!user){
     res.status(403).end();
@@ -96,11 +97,9 @@ async function needLogin(req, res, next){
   next()
 }
 
-// router.get('/secret', needLogin, (req, res)=>{
-//   res.send(`Secret: ${JSON.toString(req.user)}`)
-// })
 
-router.get('/userinfo', needLogin, async (req, res) => {
+
+router.post('/userinfo', needLogin, async (req, res) => {
   // let username = req.body.username;
   // if(!username){
   //   res.status(400).end();
