@@ -2,8 +2,8 @@ var express = require('express');
 var router = express.Router();
 var db = require('../mongo');
 const bcrypt = require('bcrypt')
-// const passport = require('passport')
-const tokens = require('../tokens')
+const tokens = require('../tokens');
+const cladman = require('../cladman');
 
 
 async function validatePassword(userObject, password){
@@ -44,6 +44,7 @@ router.post('/register', async function(req, res, next) {
   res.status(200).end();
   console.log("done");
 
+  updateHistory(req.body.username, `Registered`);
 
 });
 
@@ -68,6 +69,8 @@ router.post('/login', async (req, res, next) => {
   }
 
   res.json({token: await tokens.generate(req.body.username)}).status(200).end();
+  updateHistory(req.body.username, `Logged in from ${req.ip}`);
+  
 });
 
 async function getUser(username){
@@ -141,7 +144,56 @@ router.post('/logout', needLogin, async (req, res)=>{
   res.status(200).end();
 });
 
+router.post('/items', needLogin, async (req, res) => {
+  res.json(cladman.items).end();
+})
 
+
+async function updateHistory(username, action){
+  let collection = (await db()).collection("History");
+  collection.insertOne({username, timestamp: Math.floor(Date.now() / 1000), action});
+}
+
+
+
+
+router.post('/unload', needLogin, async (req, res) => {
+  if(!req.body.id){
+    res.status(400).end();
+    return;
+  }
+  cladman.unload(req.body.id);
+  updateHistory(req.user.username, `Requested unload of item#${req.body.id}`);
+  res.status(200).end();
+})
+
+router.move('/move', needLogin, async(req, res) => {
+  // TODO
+})
+
+function needAdmin(req, res, next) {
+  if(!req.user){
+    throw "Must be used after needLogin";
+  }
+  if(!req.user.admin){
+    res.status(403).end();
+    return;
+  }
+  next();
+}
+
+router.post('/history', needLogin, needAdmin, async (req, res) =>{
+  if(!req.body.username){
+    res.status(400).end();
+    return;
+  }
+  let collection = (await db()).collection("History");
+  let cursor = await collection.find({username: req.body.username});
+  cursor.sort({timestamp: 1})
+  let hist = await cursor.toArray();
+  res.json(hist).end();
+
+});
 
 module.exports = {getUser, validatePassword, router}
 

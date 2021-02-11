@@ -3,7 +3,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var cors = require('cors')
-const cladman = new (require('./cladman'))();
+const cladman = require('./cladman');
 
 const Users = require("./routes/users")
 
