@@ -102,7 +102,25 @@ async function needLogin(req, res, next){
 
 
 
-router.post('/userinfo', needLogin, async (req, res) => {
+router.post('/userinfo', async (req, res) => {
+  let username = req.body.username;
+  if(!username){
+    res.status(400).end();
+    return;
+  }
+  // console.log(username);
+  let user = await getUser(username);
+  if(!user){
+    res.status(400).end();
+    return;
+  }
+  // console.log(user);
+  user.password = undefined;
+  user._id = undefined;
+  res.json(user).end();
+})
+
+router.post('/current_user', needLogin, async (req, res) => {
   // let username = req.body.username;
   // if(!username){
   //   res.status(400).end();
@@ -125,13 +143,22 @@ router.post('/update_user', needLogin, needAdmin, async (req, res) => {
   if(!req.body.username){
     res.status(400).end();
   }
-  let fields = ["first_name", "last_name", "father_name", "phone", "about"];
+  let fields = ["first_name", "last_name", "father_name", "phone", "about", "picture"];
   let updateData = {};
+
+  let isOk = false;
+
   for(let field in req.body){
     console.log(field);
     if(fields.includes(field)){
       updateData[field] = req.body[field];
+      isOk = true;
     }
+  }
+  
+  if(!isOk){
+    res.status(400).end();
+    return;
   }
 
   let collection = (await db()).collection("Users");
@@ -149,8 +176,11 @@ router.post('/logout', needLogin, async (req, res)=>{
 
 router.post('/items', needLogin, async (req, res) => {
   res.json(cladman.items).end();
-})
+});
 
+router.post('/items.csv', needLogin, async (req, res) => {
+  res.type('text/csv').send(cladman.csv());
+});
 
 async function updateHistory(username, action){
   let collection = (await db()).collection("History");
@@ -210,6 +240,16 @@ router.post('/history', needLogin, needAdmin, async (req, res) =>{
   let hist = await cursor.toArray();
   res.json(hist).end();
 
+});
+
+router.post('/userlist', async (req, res) => {
+  let collection = (await db()).collection("Users");
+  let cursor = await collection.find({});
+  let arr = [];
+  (await cursor.toArray()).forEach(user => {
+    arr.push(user.username);
+  });
+  res.json(arr).end();
 });
 
 module.exports = {getUser, validatePassword, router}

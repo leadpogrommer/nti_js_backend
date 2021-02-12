@@ -1,8 +1,9 @@
-const { time } = require('console');
+const { time, Console } = require('console');
 const csv = require('csv-parse/lib/sync');
 const fs = require('fs');
 var iconvlite = require('iconv-lite');
 const fetch = require('node-fetch');
+const createCsvStringifier = require('csv-writer').createObjectCsvStringifier;
 
 class Cladman{
     constructor(){
@@ -21,7 +22,18 @@ class Cladman{
             let time_unload = Cladman.decodeTime(item.unload_time);
             // console.log(time_load);
             setTimeout(()=>{
-                fetch(`http://127.0.0.1:8228/load/${item.id}/${this.sides[Math.floor(this.nextCell/2)%2]}:${this.sides[this.nextCell % 2]}:${Math.floor(this.nextCell/4)+1}`);
+                let location;
+                while(true){
+                    if(this.nextCell > 210){
+                        this.nextCell = 1;
+                    }
+                    location = `${this.sides[Math.floor(this.nextCell/2)%2]}:${this.sides[this.nextCell % 2]}:${Math.floor(this.nextCell/4)+1}`
+                    console.log(location);
+                    if(this.checkLocation(location))break;
+                    this.nextCell++;
+                }
+                
+                fetch(`http://127.0.0.1:8228/load/${item.id}/${location}`);
                 this.nextCell++;
             }, time_load - 25000);
 
@@ -67,6 +79,16 @@ class Cladman{
     }
 
 
+    checkLocation(location){
+        for(let item of this.items){
+            if(!item.location)continue;
+            let itemLoc = `${item.location.Rack}:${item.location.CellSide}:${item.location.CellPosition}`.toLowerCase();
+            // console.log(itemLoc, location, item.state);
+            if(location === itemLoc)return false;
+        }
+        return true;
+    }
+
 
     move(id, rack, side, cell){
         rack = (rack || 'error').toLowerCase();
@@ -86,17 +108,49 @@ class Cladman{
         }
         let location = `${rack}:${side}:${cell}`;
 
-        for(let item of this.items){
-            if(!item.location)continue;
-            let itemLoc = `${item.location.Rack}:${item.location.CellSide}:${item.location.CellPosition}`.toLowerCase();
-            // console.log(itemLoc, location, item.state);
-            if(location === itemLoc)return `Cell ${location} already occupied`;
-        }
+        if(!this.checkLocation(location))return `Cell ${location} already occupied`;
+    
 
         fetch(`http://127.0.0.1:8228/move/${id}/${location}`);
 
         return null;
 
+    }
+
+    csv(){
+        let stringifier = createCsvStringifier({header: [
+            {id: 'name', title: 'Название'},
+            {id: 'model', title: 'Модель'},
+            {id: 'id', title: 'Id'},
+            {id: 'date', title: 'Дата'},
+            {id: 'load_time', title: 'Время погрузки'},
+            {id: 'unload_time', title: 'Время отгрузки'},
+            {id: 'manufacturer', title: 'Производитель'},
+            {id: 'state', title: 'Состояние'},
+            {id: 'location', title: 'Место на складе'},
+
+        ]})
+        let copies = [];
+        for(let item of this.items){
+            let copy = {};
+            Object.assign(copy, item);
+            let states = {
+                'out': 'Отгружен',
+                'pending': 'Ожидается',
+                'store': 'Хранится',
+                'moving': 'Движется по складу'
+            }
+            copy.state = states[copy.state] || 'N/A';
+            if(copy.location){
+                copy.location = `${copy.location.Rack}:${copy.location.CellSide}:${copy.location.CellPosition}`
+            }else{
+                copy.location = 'N/A';
+            }
+            copies.push(copy);
+        }
+
+
+        return stringifier.getHeaderString() + stringifier.stringifyRecords(copies);
     }
 
     
