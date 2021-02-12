@@ -121,7 +121,10 @@ router.post('/userinfo', needLogin, async (req, res) => {
   res.json(user).end();
 })
 
-router.post('/update_user', needLogin, async (req, res) => {
+router.post('/update_user', needLogin, needAdmin, async (req, res) => {
+  if(!req.body.username){
+    res.status(400).end();
+  }
   let fields = ["first_name", "last_name", "father_name", "phone", "about"];
   let updateData = {};
   for(let field in req.body){
@@ -132,7 +135,7 @@ router.post('/update_user', needLogin, async (req, res) => {
   }
 
   let collection = (await db()).collection("Users");
-  collection.updateOne({username: req.user.username}, {$set: updateData});
+  collection.updateOne({username: req.body.username}, {$set: updateData});
 
   res.status(200).end();
   // res.json(updateData).end();
@@ -162,13 +165,27 @@ router.post('/unload', needLogin, async (req, res) => {
     res.status(400).end();
     return;
   }
-  cladman.unload(req.body.id);
-  updateHistory(req.user.username, `Requested unload of item#${req.body.id}`);
-  res.status(200).end();
+  let result = cladman.unload(req.body.id);
+  if(!result){
+    updateHistory(req.user.username, `Unloaded item #${req.body.id}`);
+    res.status(200).end();
+  }else{
+    res.status(400).send(result);
+  }
 })
 
-router.move('/move', needLogin, async(req, res) => {
-  // TODO
+router.post('/move', needLogin, async(req, res) => {
+  if(!req.body.id){
+    res.status(400).end();
+    return;
+  }
+  let result = cladman.move(parseInt(req.body.id), req.body.rack, req.body.side, req.body.cell);
+  if(!result){
+    res.status(200).end();
+    updateHistory(req.body.username, `Moved item #${req.body.id} to cell ${req.body.rack}:${req.body.side}:${req.body.cell}`)
+  }else{
+    res.status(400).send(result);
+  }
 })
 
 function needAdmin(req, res, next) {

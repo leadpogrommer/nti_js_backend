@@ -9,7 +9,9 @@ class Cladman{
         let data = iconvlite.decode(fs.readFileSync('schedule.csv'), 'cp1251');
         let table = csv(data, {delimiter: ';', columns: ['name', 'model', 'id', 'date', 'load_time', 'unload_time', 'manufacturer'], from: 2 });
         let itemById = {};
-        let sides = ["right", "left"];
+        this.itemById = itemById;
+        this.sides = ["right", "left"];
+        
         
         
 
@@ -19,7 +21,7 @@ class Cladman{
             let time_unload = Cladman.decodeTime(item.unload_time);
             // console.log(time_load);
             setTimeout(()=>{
-                fetch(`http://127.0.0.1:8228/load/${item.id}/${sides[Math.floor(this.nextCell/2)%2]}:${sides[this.nextCell % 2]}:${Math.floor(this.nextCell/4)+1}`);
+                fetch(`http://127.0.0.1:8228/load/${item.id}/${this.sides[Math.floor(this.nextCell/2)%2]}:${this.sides[this.nextCell % 2]}:${Math.floor(this.nextCell/4)+1}`);
                 this.nextCell++;
             }, time_load - 25000);
 
@@ -57,10 +59,43 @@ class Cladman{
     }
 
     unload(id) {
+        if(!this.itemById.hasOwnProperty(id)){
+            return "No such item";
+        }
         fetch(`http://127.0.0.1:8228/unload/${id}`);
+        return null;
     }
 
+
+
     move(id, rack, side, cell){
+        rack = (rack || 'error').toLowerCase();
+        side = (side || 'error').toLowerCase();
+        if(!this.itemById.hasOwnProperty(id)){
+            return "No such item";
+        }
+        if(this.itemById[id].state != "store"){
+            return "Item cannot be moved now";
+        }
+        if(!this.sides.includes(rack) || !this.sides.includes(side)){
+            return "Invalid side";
+        }
+        cell = parseInt(cell);
+        if(isNaN(cell) || !(1<=cell<=54)){
+            return "Invalid cell number";
+        }
+        let location = `${rack}:${side}:${cell}`;
+
+        for(let item of this.items){
+            if(!item.location)continue;
+            let itemLoc = `${item.location.Rack}:${item.location.CellSide}:${item.location.CellPosition}`.toLowerCase();
+            // console.log(itemLoc, location, item.state);
+            if(location === itemLoc)return `Cell ${location} already occupied`;
+        }
+
+        fetch(`http://127.0.0.1:8228/move/${id}/${location}`);
+
+        return null;
 
     }
 
