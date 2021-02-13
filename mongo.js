@@ -1,6 +1,6 @@
 const MongoClient = require("mongodb").MongoClient;
 
-let client = new MongoClient("mongodb://127.0.0.1")
+let client = new MongoClient("mongodb://172.27.43.30")
 
 let ready = false;
 

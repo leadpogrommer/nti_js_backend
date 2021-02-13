@@ -129,7 +129,7 @@ class Cladman{
             {id: 'state', title: 'Состояние'},
             {id: 'location', title: 'Место на складе'},
 
-        ]})
+        ], fieldDelimiter: ';'})
         let copies = [];
         for(let item of this.items){
             let copy = {};
@@ -150,7 +150,7 @@ class Cladman{
         }
 
 
-        return stringifier.getHeaderString() + stringifier.stringifyRecords(copies);
+        return iconvlite.encode(stringifier.getHeaderString() + stringifier.stringifyRecords(copies), 'cp1251');
     }
 
     
